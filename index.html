@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Weather Dashboard | SUT Project</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" type="image/png" href="images/icon.png">
+    <link rel="apple-touch-icon" href="images/icon.png">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+
+    <!-- خلفية الفيديو -->
+    <div class="video-background-container">
+        <div class="video-overlay"></div>
+        <video id="bg-video" autoplay loop muted playsinline preload="none"></video>
+    </div>
+
+    <div class="dashboard-container">
+        <main class="main-content">
+
+            <nav style="display:flex;justify-content:space-between;align-items:center;margin-bottom:30px;">
+                <h1 style="margin-bottom:0;">Weather Dashboard</h1>
+                <button id="theme-toggle" class="theme-toggle">☀️ Light Mode</button>
+            </nav>
+
+            <section class="search-section">
+                <form id="search-form">
+                    <label for="city-input" style="display:none;">Search City</label>
+                    <input type="text" id="city-input" placeholder="e.g. Cairo" required autocomplete="off">
+                    <button type="button" id="voice-search-btn" title="Voice search">🎤</button>
+                    <button type="submit">Search</button>
+                </form>
+            </section>
+
+            <section id="current-weather"></section>
+
+            <section class="conditions-section" style="margin-bottom:40px;">
+                <h3>Current Conditions</h3>
+                <div id="conditions-grid" class="conditions-grid"></div>
+            </section>
+
+            <!-- الخريطة مع hint -->
+            <section id="map-section" style="margin-bottom:40px; position:relative;">
+                <div id="map-hint">🖱️ Click on map to explore · Scroll inside map to zoom</div>
+                <div id="map"></div>
+            </section>
+
+            <section class="forecast-section">
+                <h3>13-Day Forecast</h3>
+                <div id="forecast-cards" class="forecast-container"></div>
+                <div class="chart-container" style="margin-top:40px;background:var(--glass-bg);padding:20px;border-radius:24px;border:1px solid var(--glass-border);backdrop-filter:blur(15px);">
+                    <canvas id="forecast-chart"></canvas>
+                </div>
+            </section>
+
+            <section class="hourly-section" style="margin-top:40px;margin-bottom:40px;">
+                <h3>Hourly Forecast</h3>
+                <div id="hourly-forecast-container" class="hourly-forecast-container"></div>
+                <div class="hourly-details-card">
+                    <div class="hourly-tabs" id="hourly-tabs">
+                        <button class="tab-btn active" data-tab="precipitation">Precipitation</button>
+                        <button class="tab-btn" data-tab="wind">Wind</button>
+                        <button class="tab-btn" data-tab="humidity">Humidity</button>
+                        <button class="tab-btn" data-tab="sunshine">Sunshine (UV)</button>
+                    </div>
+                    <div id="hourly-tab-content" class="hourly-tab-content"></div>
+                </div>
+            </section>
+
+            <footer style="margin-top:50px;text-align:center;color:var(--text-dim);font-size:0.9rem;border-top:1px solid rgba(255,255,255,0.1);padding-top:20px;">
+                <p>Developed with ❤️ by: <strong>Omar Ramadan</strong> | SUT</p>
+            </footer>
+
+        </main>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/app.js"></script>
+
+    <!-- إخفاء hint الخريطة بعد أول تفاعل -->
+    <script>
+        document.getElementById('map').addEventListener('click', () => {
+            const hint = document.getElementById('map-hint');
+            if (hint) hint.classList.add('hidden');
+        }, { once: true });
+    </script>
+</body>
+</html>
