@@ -244,7 +244,7 @@ const updateBackground = (data, timezone) => {
 // 5. Map & Fetch Operations
 // =========================================================
 const getExtendedMeteoUrl = (lat, lon) =>
-    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day,relative_humidity_2m,wind_speed_10m,wind_direction_10m,surface_pressure&hourly=temperature_2m,weather_code,precipitation_probability,wind_speed_10m,relative_humidity_2m,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_sum&past_days=3&forecast_days=10&timezone=auto`;
+    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day,relative_humidity_2m,wind_speed_10m,wind_direction_10m,surface_pressure&hourly=temperature_2m,weather_code,precipitation_probability,wind_speed_10m,relative_humidity_2m,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_sum&past_days=3&forecast_days=9&timezone=auto`;
 
 const updateMap = (lat, lon, temp, city) => {
     if (!map) {
@@ -308,6 +308,16 @@ const _fetchAndDisplay = async (lat, lon, locationName, country = "") => {
     localStorage.setItem('lastWeatherData', JSON.stringify(currentData));
     localStorage.setItem('lastMeteoData', JSON.stringify(meteoData));
     updateAllUI(currentData, meteoData);
+
+    // Log city search to backend
+    try {
+        fetch(`${BACKEND}/api/searches`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ city: locationName })
+        });
+    } catch(e) {}
+
     return { currentData, meteoData };
 };
 
@@ -600,12 +610,18 @@ const displayForecast = (daily) => {
     const forecastSection   = document.querySelector('.forecast-section');
     if (!forecastContainer) return;
     forecastContainer.innerHTML = '';
-    const dailyData = daily.time.map((dateStr, index) => ({
+    const today = new Date().toISOString().split('T')[0];
+    const todayIdx = daily.time.findIndex(d => d === today);
+    // Show 3 days before today + today + 9 days after
+    const startIdx = Math.max(0, todayIdx - 3);
+    const endIdx   = Math.min(daily.time.length, todayIdx + 10);
+    const allData = daily.time.map((dateStr, index) => ({
         dateStr,
         temp_max: daily.temperature_2m_max[index],
         temp_min: daily.temperature_2m_min[index],
         weather: [{ description: wmoToDescription(daily.weather_code[index]).desc }]
     }));
+    const dailyData = allData.slice(startIdx, endIdx);
     dailyData.forEach(day => {
         const isToday = new Date().toISOString().split('T')[0] === day.dateStr;
         const dateLabel = isToday ? "Today" : new Date(day.dateStr).toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});

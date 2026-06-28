@@ -20,13 +20,18 @@ mongoose.connect(process.env.MONGO_URI, { family: 4, serverSelectionTimeoutMS: 3
     .then(() => console.log('✅ MongoDB Connected'))
     .catch(err => console.error('❌ MongoDB Error:', err));
 
+// =========================================================
 // Models
+// =========================================================
+
+// Visitor counter
 const VisitorSchema = new mongoose.Schema({
     date:  { type: String, required: true, unique: true },
     count: { type: Number, default: 0 }
 });
 const Visitor = mongoose.model('Visitor', VisitorSchema);
 
+// Favorite cities
 const FavoriteCitySchema = new mongoose.Schema({
     sessionId: { type: String, required: true },
     city:      { type: String, required: true },
@@ -38,11 +43,23 @@ const FavoriteCitySchema = new mongoose.Schema({
 FavoriteCitySchema.index({ sessionId: 1, city: 1 }, { unique: true });
 const FavoriteCity = mongoose.model('FavoriteCity', FavoriteCitySchema);
 
+// Search history — tracks every searched city
+const SearchSchema = new mongoose.Schema({
+    city:       { type: String, required: true, unique: true },
+    count:      { type: Number, default: 1 },
+    lastSearch: { type: Date, default: Date.now }
+});
+const Search = mongoose.model('Search', SearchSchema);
+
+// =========================================================
 // Routes
+// =========================================================
+
 app.get('/', (req, res) => {
     res.json({ status: '✅ Weather Dashboard Backend is running!' });
 });
 
+// Register a visit
 app.post('/api/visit', async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
@@ -57,6 +74,7 @@ app.post('/api/visit', async (req, res) => {
     }
 });
 
+// Get visit stats
 app.get('/api/stats', async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
@@ -75,6 +93,40 @@ app.get('/api/stats', async (req, res) => {
     }
 });
 
+// Log a city search
+app.post('/api/searches', async (req, res) => {
+    try {
+        const { city } = req.body;
+        if (!city) return res.status(400).json({ error: 'city required' });
+        const doc = await Search.findOneAndUpdate(
+            { city: city.toLowerCase() },
+            { $inc: { count: 1 }, lastSearch: new Date(), city: city.toLowerCase() },
+            { upsert: true, new: true }
+        );
+        res.json({ success: true, search: doc });
+    } catch(err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get all searched cities — sorted by most searched
+app.get('/api/searches', async (req, res) => {
+    try {
+        const searches = await Search.find().sort({ count: -1 }).limit(50);
+        res.json({
+            total: searches.length,
+            cities: searches.map(s => ({
+                city:       s.city,
+                count:      s.count,
+                lastSearch: s.lastSearch
+            }))
+        });
+    } catch(err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get favorite cities
 app.get('/api/favorites/:sessionId', async (req, res) => {
     try {
         const cities = await FavoriteCity.find({ sessionId: req.params.sessionId })
@@ -85,6 +137,7 @@ app.get('/api/favorites/:sessionId', async (req, res) => {
     }
 });
 
+// Add a favorite city
 app.post('/api/favorites', async (req, res) => {
     try {
         const { sessionId, city, country, lat, lon } = req.body;
@@ -103,6 +156,7 @@ app.post('/api/favorites', async (req, res) => {
     }
 });
 
+// Remove a favorite city
 app.delete('/api/favorites/:sessionId/:city', async (req, res) => {
     try {
         await FavoriteCity.deleteOne({
@@ -115,5 +169,8 @@ app.delete('/api/favorites/:sessionId/:city', async (req, res) => {
     }
 });
 
+// =========================================================
+// Start Server
+// =========================================================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
