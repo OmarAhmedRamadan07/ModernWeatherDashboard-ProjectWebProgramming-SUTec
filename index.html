@@ -15,7 +15,7 @@
 </head>
 <body>
 
-    <!-- خلفية الفيديو -->
+    <!-- Video Background -->
     <div class="video-background-container">
         <div class="video-overlay"></div>
         <video id="bg-video" autoplay loop muted playsinline preload="none"></video>
@@ -29,6 +29,12 @@
                 <button id="theme-toggle" class="theme-toggle">☀️ Light Mode</button>
             </nav>
 
+            <!-- Favorite Cities -->
+            <section style="margin-bottom:30px;">
+                <h3 style="color:var(--text-dim);letter-spacing:3px;text-transform:uppercase;font-size:1rem;font-weight:600;margin-bottom:15px;">⭐ Saved Cities</h3>
+                <div id="favorites-container"></div>
+            </section>
+
             <section class="search-section">
                 <form id="search-form">
                     <label for="city-input" style="display:none;">Search City</label>
@@ -40,12 +46,23 @@
 
             <section id="current-weather"></section>
 
+            <!-- Favorite Cities -->
+            <section class="favorites-section" style="margin-bottom:30px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:15px;">
+                    <h3 style="color:var(--text-dim);letter-spacing:3px;text-transform:uppercase;font-size:1rem;font-weight:600;">⭐ Saved Cities</h3>
+                    <button id="save-city-btn" onclick="saveCurrentCity()" style="background:rgba(56,189,248,0.15);border:1px solid var(--accent-color);color:var(--accent-color);padding:8px 16px;border-radius:20px;cursor:pointer;font-size:0.85rem;font-weight:600;">+ Save Current City</button>
+                </div>
+                <div id="favorites-container" style="display:flex;flex-wrap:wrap;gap:10px;">
+                    <p style="color:var(--text-dim);font-size:0.9rem;">No saved cities yet</p>
+                </div>
+            </section>
+
             <section class="conditions-section" style="margin-bottom:40px;">
                 <h3>Current Conditions</h3>
                 <div id="conditions-grid" class="conditions-grid"></div>
             </section>
 
-            <!-- الخريطة مع hint -->
+            <!-- Map with hint -->
             <section id="map-section" style="margin-bottom:40px; position:relative;">
                 <div id="map-hint">🖱️ Click on map to explore · Scroll inside map to zoom</div>
                 <div id="map"></div>
@@ -74,7 +91,7 @@
             </section>
 
             <footer style="margin-top:50px;text-align:center;color:var(--text-dim);font-size:0.9rem;border-top:1px solid rgba(255,255,255,0.1);padding-top:20px;">
-                <p>Developed with ❤️ by: <strong>Omar Ramadan</strong> | SUT</p>
+                <p>Developed with ❤️ by: <strong>Omar Ramadan</strong> | SUTech</p>
             </footer>
 
         </main>
@@ -84,7 +101,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="js/app.js"></script>
 
-    <!-- إخفاء hint الخريطة بعد أول تفاعل -->
+    <!-- Hide map hint after first interaction -->
     <script>
         document.getElementById('map').addEventListener('click', () => {
             const hint = document.getElementById('map-hint');

@@ -17,6 +17,71 @@ let _localClockInterval = null;
 const CLOUD = 'https://res.cloudinary.com/dp91c7ouo/video/upload/';
 
 // =========================================================
+// Backend API URL
+// =========================================================
+const BACKEND = 'https://modernweatherdashboard-projectwebprogramming-sut-production.up.railway.app';
+
+// Generate a unique session ID for each user
+let _sessionId = localStorage.getItem('sessionId');
+if (!_sessionId) {
+    _sessionId = 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+    localStorage.setItem('sessionId', _sessionId);
+}
+
+// Register a visit to the backend
+async function registerVisit() {
+    try {
+        await fetch(`${BACKEND}/api/visit`, { method: 'POST' });
+    } catch(e) {}
+}
+
+// Fetch saved favorite cities from backend
+async function getFavorites() {
+    try {
+        const res = await fetch(`${BACKEND}/api/favorites/${_sessionId}`);
+        const data = await res.json();
+        return data.cities || [];
+    } catch(e) { return []; }
+}
+
+// Add a city to favorites
+async function addFavorite(city, country, lat, lon) {
+    try {
+        await fetch(`${BACKEND}/api/favorites`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: _sessionId, city, country, lat, lon })
+        });
+        renderFavorites();
+    } catch(e) {}
+}
+
+// Remove a city from favorites
+async function removeFavorite(city) {
+    try {
+        await fetch(`${BACKEND}/api/favorites/${_sessionId}/${encodeURIComponent(city)}`, { method: 'DELETE' });
+        renderFavorites();
+    } catch(e) {}
+}
+
+// Render favorite cities list
+async function renderFavorites() {
+    const cities = await getFavorites();
+    const container = document.getElementById('favorites-container');
+    if (!container) return;
+    if (cities.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-dim);font-size:0.9rem;">No saved cities yet. Search for a city and click ★ to save it.</p>';
+        return;
+    }
+    container.innerHTML = cities.map(c => `
+        <div class="favorite-city-item" onclick="fetchWeatherData('${c.city}')" style="display:flex;justify-content:space-between;align-items:center;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:12px;padding:12px 16px;cursor:pointer;margin-bottom:8px;transition:all 0.3s ease;">
+            <span>🌍 <strong>${c.city}</strong>${c.country ? ', '+c.country : ''}</span>
+            <button onclick="event.stopPropagation();removeFavorite('${c.city}')" style="background:transparent;border:none;color:#ef4444;cursor:pointer;font-size:1.2rem;">✕</button>
+        </div>
+    `).join('');
+}
+
+// =========================================================
 // 3. Data Adapters & Helpers
 // =========================================================
 function wmoToDescription(code, is_day = 1) {
@@ -355,7 +420,11 @@ const displayCurrentWeather = (data, timezone) => {
 
     weatherSection.innerHTML = `
         <div class="current-weather-card">
-            <h2>${locationDisplay}</h2>
+            <h2>${locationDisplay}
+                <button onclick="addFavorite('${data.name}','${data.sys.country||''}',${data.coord.lat},${data.coord.lon})"
+                    title="Save to favorites"
+                    style="background:transparent;border:none;color:#f59e0b;font-size:1.5rem;cursor:pointer;margin-left:10px;vertical-align:middle;">★</button>
+            </h2>
             <div class="weather-info">
                 <img src="${iconUrl}" alt="Weather">
                 <div class="details">
@@ -634,7 +703,7 @@ themeToggle.addEventListener('click', () => {
     const isLight = document.body.classList.contains('light-mode');
     localStorage.setItem('theme', isLight ? 'light' : 'dark');
     themeToggle.innerHTML = isLight ? '🌙 Dark Mode' : '☀️ Light Mode';
-// Redraw the chart with the correct colors
+// Redraw chart with correct theme colors
     const lastData = JSON.parse(localStorage.getItem('lastMeteoData'));
     if (lastData) renderChart(lastData.daily.time.map((dateStr,i)=>({
         dateStr,
@@ -670,4 +739,8 @@ if (SpeechRecognition) {
     voiceBtn.style.display = 'none';
 }
 
-window.onload = () => { getUserLocation(); };
+window.onload = () => {
+    getUserLocation();
+    registerVisit();
+    renderFavorites();
+};
