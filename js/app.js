@@ -459,15 +459,6 @@ const displayCurrentWeather = (data, timezone) => {
             </div>
         </div>
     `;
-    // Attach favorite button event safely (avoids quote issues in inline onclick)
-    const favBtn = document.getElementById('fav-btn');
-    if (favBtn) {
-        favBtn.addEventListener('click', () => {
-            addFavorite(data.name, data.sys.country || '', data.coord.lat, data.coord.lon);
-            favBtn.textContent = '✅';
-            setTimeout(() => { favBtn.textContent = '★'; }, 2000);
-        });
-    }
     // Attach favorite button after DOM update
     setTimeout(() => {
         const favBtn = document.getElementById('fav-btn');
@@ -794,4 +785,8 @@ window.onload = () => {
     getUserLocation();
     registerVisit();
     renderFavorites();
+    // Keep Railway backend awake — ping every 4 minutes
+    setInterval(() => {
+        fetch(`${BACKEND}/`).catch(() => {});
+    }, 4 * 60 * 1000);
 };
