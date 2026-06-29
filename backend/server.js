@@ -63,30 +63,37 @@ app.get('/', (req, res) => {
 app.post('/api/visit', async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
-        const visitor = await Visitor.findOneAndUpdate(
-            { date: today },
-            { $inc: { count: 1 } },
-            { upsert: true, new: true }
-        );
+        // Increment today's count AND total counter in parallel
+        const [visitor] = await Promise.all([
+            Visitor.findOneAndUpdate(
+                { date: today },
+                { $inc: { count: 1 } },
+                { upsert: true, new: true }
+            ),
+            Visitor.findOneAndUpdate(
+                { date: '__total__' },
+                { $inc: { count: 1 } },
+                { upsert: true, new: true }
+            )
+        ]);
         res.json({ success: true, todayCount: visitor.count });
     } catch(err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// Get visit stats
+// Get visit stats — fast: no aggregate, uses pre-computed total
 app.get('/api/stats', async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
-        // Run all queries in parallel for speed
-        const [todayDoc, totalResult, last7] = await Promise.all([
+        const [todayDoc, totalDoc, last7] = await Promise.all([
             Visitor.findOne({ date: today }),
-            Visitor.aggregate([{ $group: { _id: null, total: { $sum: '$count' } } }]),
-            Visitor.find().sort({ date: -1 }).limit(7)
+            Visitor.findOne({ date: '__total__' }),
+            Visitor.find({ date: { $ne: '__total__' } }).sort({ date: -1 }).limit(7)
         ]);
         res.json({
             today:     todayDoc?.count || 0,
-            total:     totalResult[0]?.total || 0,
+            total:     totalDoc?.count || 0,
             last7Days: last7.map(d => ({ date: d.date, count: d.count }))
         });
     } catch(err) {
