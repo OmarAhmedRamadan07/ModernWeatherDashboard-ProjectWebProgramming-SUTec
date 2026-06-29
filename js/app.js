@@ -47,13 +47,19 @@ async function getFavorites() {
 // Add a city to favorites
 async function addFavorite(city, country, lat, lon) {
     try {
-        await fetch(`${BACKEND}/api/favorites`, {
+        const res = await fetch(`${BACKEND}/api/favorites`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId: _sessionId, city, country, lat, lon })
         });
-        renderFavorites();
-    } catch(e) {}
+        const data = await res.json();
+        if (data.success) {
+            Swal.fire({ icon:'success', title:`${city} saved!`, timer:1500, showConfirmButton:false, toast:true, position:'top-end' });
+            renderFavorites();
+        }
+    } catch(e) {
+        Swal.fire({ icon:'error', title:'Could not save city', timer:1500, showConfirmButton:false, toast:true, position:'top-end' });
+    }
 }
 
 // Remove a city from favorites
@@ -279,6 +285,8 @@ const updateMap = (lat, lon, temp, city) => {
                     is_day: isDay
                 };
                 updateAllUI(currentData, meteoData);
+                // Log city search from map click
+                try { fetch(`${BACKEND}/api/searches`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ city: preciseLocation }) }); } catch(e) {}
             } catch(err) {
                 marker.bindPopup(`<strong style="color:red;">Error fetching data</strong>`, {autoPan:false}).openPopup();
             }
@@ -431,7 +439,7 @@ const displayCurrentWeather = (data, timezone) => {
     weatherSection.innerHTML = `
         <div class="current-weather-card">
             <h2>${locationDisplay}
-                <button onclick="addFavorite('${data.name}','${data.sys.country||''}',${data.coord.lat},${data.coord.lon})"
+                <button id="fav-btn"
                     title="Save to favorites"
                     style="background:transparent;border:none;color:#f59e0b;font-size:1.5rem;cursor:pointer;margin-left:10px;vertical-align:middle;">★</button>
             </h2>
@@ -444,6 +452,15 @@ const displayCurrentWeather = (data, timezone) => {
             </div>
         </div>
     `;
+    // Attach favorite button event safely (avoids quote issues in inline onclick)
+    const favBtn = document.getElementById('fav-btn');
+    if (favBtn) {
+        favBtn.addEventListener('click', () => {
+            addFavorite(data.name, data.sys.country || '', data.coord.lat, data.coord.lon);
+            favBtn.textContent = '✅';
+            setTimeout(() => { favBtn.textContent = '★'; }, 2000);
+        });
+    }
     updateMap(data.coord.lat, data.coord.lon, data.main.temp, data.name);
 };
 
