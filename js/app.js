@@ -159,26 +159,36 @@ function startLocalClock(timezone) {
 // =========================================================
 // 4. Audio & Video Management
 // =========================================================
-const weatherSounds = {
-    'storm-heavy':  new Audio(`${CLOUD}storm-heavy_rndq5z.mp3`),
-    'storm-light':  new Audio(`${CLOUD}storm-light_o0e6wh.mp3`),
-    'thunder-only': new Audio(`${CLOUD}thunder-only_fz2yi3.mp3`),
-    'rain-heavy':   new Audio(`${CLOUD}rain-heavy_jpf17d.mp3`),
-    'rain-medium':  new Audio(`${CLOUD}rain-shower_wuw9to.mp3`),
-    'rain-light':   new Audio(`${CLOUD}rain-light_tzit6n.mp3`),
-    'snow':         new Audio(`${CLOUD}snow_s5rwzl.mp3`),
-    'wind-strong':  new Audio(`${CLOUD}wind-strong_apnkt2.mp3`),
-    'wind-light':   new Audio(`${CLOUD}wind-light_vcvkmw.mp3`),
-    'clear-day':    new Audio(`${CLOUD}clear-day_shmjca.mp3`),
-    'clear-night':  new Audio(`${CLOUD}clear-night_rp1z80.mp3`),
-    'click':        new Audio(`${CLOUD}click_ignifg.mp3`),
-    'success':      new Audio(`${CLOUD}success_ygqb3i.mp3`),
-    'error':        new Audio(`${CLOUD}error_jplofl.mp3`)
+// Audio files map — preloaded on first user interaction to avoid delay
+const SOUND_FILES = {
+    'storm-heavy':  `${CLOUD}storm-heavy_rndq5z.mp3`,
+    'storm-light':  `${CLOUD}storm-light_o0e6wh.mp3`,
+    'thunder-only': `${CLOUD}thunder-only_fz2yi3.mp3`,
+    'rain-heavy':   `${CLOUD}rain-heavy_jpf17d.mp3`,
+    'rain-medium':  `${CLOUD}rain-shower_wuw9to.mp3`,
+    'rain-light':   `${CLOUD}rain-light_tzit6n.mp3`,
+    'snow':         `${CLOUD}snow_s5rwzl.mp3`,
+    'wind-strong':  `${CLOUD}wind-strong_apnkt2.mp3`,
+    'wind-light':   `${CLOUD}wind-light_vcvkmw.mp3`,
+    'clear-day':    `${CLOUD}clear-day_shmjca.mp3`,
+    'clear-night':  `${CLOUD}clear-night_rp1z80.mp3`,
+    'click':        `${CLOUD}click_ignifg.mp3`,
+    'success':      `${CLOUD}success_ygqb3i.mp3`,
+    'error':        `${CLOUD}error_jplofl.mp3`
 };
 
-Object.keys(weatherSounds).forEach(key => {
-    if (!['click','success','error'].includes(key)) weatherSounds[key].loop = true;
-});
+const weatherSounds = {};
+const LOOP_SOUNDS = ['storm-heavy','storm-light','thunder-only','rain-heavy','rain-medium','rain-light','snow','wind-strong','wind-light','clear-day','clear-night'];
+
+// Lazy-load audio only when needed
+function getSound(key) {
+    if (!weatherSounds[key]) {
+        weatherSounds[key] = new Audio(SOUND_FILES[key]);
+        if (LOOP_SOUNDS.includes(key)) weatherSounds[key].loop = true;
+        weatherSounds[key].preload = 'auto';
+    }
+    return weatherSounds[key];
+}
 
 let currentPlayingSound = null;
 
@@ -372,7 +382,7 @@ const fetchWeatherData = async (cityInputStr) => {
         throw new Error("City not found");
 
     } catch(error) {
-        if (weatherSounds['error']) weatherSounds['error'].play().catch(()=>{});
+        getSound('error').play().catch(()=>{});
         const lastData = JSON.parse(localStorage.getItem('lastWeatherData'));
         const lastMeteo = JSON.parse(localStorage.getItem('lastMeteoData'));
         if (lastData && lastMeteo) {
@@ -426,7 +436,7 @@ const updateAllUI = (currentData, meteoData) => {
 };
 
 const displayCurrentWeather = (data, timezone) => {
-    if (weatherSounds['success']) weatherSounds['success'].play().catch(()=>{});
+    getSound('success').play().catch(()=>{});
     playWeatherSound(data);
     updateBackground(data, timezone);
     if (timezone) startLocalClock(timezone);
@@ -452,15 +462,17 @@ const displayCurrentWeather = (data, timezone) => {
             </div>
         </div>
     `;
-    // Attach favorite button event safely (avoids quote issues in inline onclick)
-    const favBtn = document.getElementById('fav-btn');
-    if (favBtn) {
-        favBtn.addEventListener('click', () => {
-            addFavorite(data.name, data.sys.country || '', data.coord.lat, data.coord.lon);
-            favBtn.textContent = '✅';
-            setTimeout(() => { favBtn.textContent = '★'; }, 2000);
-        });
-    }
+    // Attach favorite button event safely after DOM update
+    setTimeout(() => {
+        const favBtn = document.getElementById('fav-btn');
+        if (favBtn) {
+            favBtn.addEventListener('click', () => {
+                addFavorite(data.name, data.sys.country || '', data.coord.lat, data.coord.lon);
+                favBtn.textContent = '✅';
+                setTimeout(() => { favBtn.textContent = '★'; }, 2000);
+            });
+        }
+    }, 0);
     updateMap(data.coord.lat, data.coord.lon, data.main.temp, data.name);
 };
 
@@ -750,6 +762,8 @@ let isAudioUnlocked = false;
 document.addEventListener('click', () => {
     if (!isAudioUnlocked) {
         isAudioUnlocked = true;
+        // Preload all sounds silently on first interaction
+        Object.keys(SOUND_FILES).forEach(key => getSound(key));
         if (currentPlayingSound && currentPlayingSound.paused) currentPlayingSound.play().catch(()=>{});
     }
 }, { once:true });
