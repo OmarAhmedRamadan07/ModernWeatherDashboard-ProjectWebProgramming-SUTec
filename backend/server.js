@@ -78,11 +78,12 @@ app.post('/api/visit', async (req, res) => {
 app.get('/api/stats', async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
-        const todayDoc = await Visitor.findOne({ date: today });
-        const totalResult = await Visitor.aggregate([
-            { $group: { _id: null, total: { $sum: '$count' } } }
+        // Run all queries in parallel for speed
+        const [todayDoc, totalResult, last7] = await Promise.all([
+            Visitor.findOne({ date: today }),
+            Visitor.aggregate([{ $group: { _id: null, total: { $sum: '$count' } } }]),
+            Visitor.find().sort({ date: -1 }).limit(7)
         ]);
-        const last7 = await Visitor.find().sort({ date: -1 }).limit(7);
         res.json({
             today:     todayDoc?.count || 0,
             total:     totalResult[0]?.total || 0,
